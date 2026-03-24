@@ -227,7 +227,7 @@ def log_lead(payload: dict, sms_text: str, sms_sent_iso: str) -> str:
         "SMS_Sent_Time":         sms_sent_iso,
         "Response_Time_Seconds": response_seconds,
         "Raw_Inquiry_Text":      payload.get("inquiry", ""),
-        "Inquiry_Type":          "General Inquiry",   # Claude will refine this later
+        "Inquiry_type":          "General Inquiry",   # Claude will refine this later
         "New_vs_Existing":       "Unknown",
         "Claude_Response":       sms_text,
         "Engagement":            "No Reply",
