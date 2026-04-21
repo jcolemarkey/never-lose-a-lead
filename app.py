@@ -102,7 +102,7 @@ and locks in a callback.
 
 ## What the SMS must do — in this order
 1. Use their first name
-2. Acknowledge what they specifically asked about in 1 short phrase
+2. Reference the size of their HVAC fleet (truck_count) to show you read their submission
 3. Say we can help and that someone will call them
 4. Offer two callback windows: 9am or 11am tomorrow ({tomorrow})
 5. Tell them to reply 9 or 11 to confirm
@@ -121,13 +121,13 @@ Return ONLY the SMS text. No quotes, no labels, no explanation."""
 # ---------------------------------------------------------------------------
 # 3. Generate SMS via Claude
 # ---------------------------------------------------------------------------
-def generate_sms(first_name: str, inquiry: str, ontology_context: str) -> str:
+def generate_sms(first_name: str, truck_count: str, ontology_context: str) -> str:
     """Call Claude and return the raw SMS string."""
     system_prompt = build_system_prompt(ontology_context)
 
     user_message = (
         f"Lead name: {first_name}\n"
-        f"Their inquiry: {inquiry}\n\n"
+        f"Their truck count: {truck_count}\n\n"
         "Write the SMS now."
     )
 
@@ -226,7 +226,7 @@ def log_lead(payload: dict, sms_text: str, sms_sent_iso: str) -> str:
         "Submit_Time":           submit_iso,
         "SMS_Sent_Time":         sms_sent_iso,
         "Response_Time_Seconds": response_seconds,
-        "Raw_Inquiry_Text":      payload.get("inquiry", ""),
+        "Raw_Inquiry_Text":      payload.get("truck_count", ""),
         "Inquiry_type":          "General Inquiry",   # Claude will refine this later
         "New_vs_Existing":       "Unknown",
         "Claude_Response":       sms_text,
@@ -252,17 +252,17 @@ def trigger_sms():
             return jsonify({"error": "Empty or non-JSON request body"}), 400
 
         # --- Validate ---
-        first_name = (payload.get("first_name") or "").strip()
-        phone      = (payload.get("phone") or "").strip()
-        inquiry    = (payload.get("inquiry") or "").strip()
+        first_name  = (payload.get("first_name") or "").strip()
+        phone       = (payload.get("phone") or "").strip()
+        truck_count = (payload.get("truck_count") or "").strip()
 
         if not first_name or not phone:
             return jsonify({"error": "first_name and phone are required"}), 400
 
-        if not inquiry:
-            inquiry = "your inquiry"  # graceful fallback
+        if not truck_count:
+            truck_count = "an unspecified number of"  # graceful fallback
 
-        logger.info(f"Lead received → {first_name} | {phone}")
+        logger.info(f"Lead received → {first_name} | {phone} | {truck_count} trucks")
 
         # --- Step 1: Ontology ---
         logger.info("Fetching ontology context...")
@@ -270,7 +270,7 @@ def trigger_sms():
 
         # --- Step 2: Claude ---
         logger.info("Generating SMS via Claude...")
-        sms_text = generate_sms(first_name, inquiry, ontology_context)
+        sms_text = generate_sms(first_name, truck_count, ontology_context)
         logger.info(f"SMS ({len(sms_text)} chars): {sms_text}")
 
         # --- Step 3: Twilio ---
